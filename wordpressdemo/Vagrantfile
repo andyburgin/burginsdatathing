@@ -1,0 +1,97 @@
+#use vagrant berkshelf plugin
+require 'berkshelf/vagrant'
+
+Vagrant.configure("2") do |config|
+
+  # Default vagrant ubuntu 12.04 LTS box
+  config.vm.box = "precise64"
+
+  # bridged because I want vm to be on the subnet of the LAN
+  config.vm.network :public_network
+
+  # Hack to set static ip address on bridged network adapter - change 192.168.2.222 and netmask to match your setup
+  config.vm.provision :shell, :inline => "ifconfig eth1 192.168.2.222 netmask 255.255.255.0 up"
+  
+  # Hack to use chef 11 beacuse of cookbook requirements 
+  config.vm.provision :shell, :inline => "gem install chef --version 11.4.2 --no-rdoc --no-ri --conservative"
+  
+  # update apt repos as default vagrant precise64 box is out of date 
+  config.vm.provision :shell, :inline => "apt-get update"
+
+  config.berkshelf.enabled = true
+
+  config.vm.provision :chef_solo do |chef|
+
+	chef.run_list = %w[
+        apt
+		hostname
+		build-essential 
+		wordpress
+		logstash::beaver
+	]
+
+	chef.json = {
+	
+		:build_essential => {
+			"compiletime" => true
+		},
+
+		:set_fqdn => "wordpressdemo",
+		:mysql => {
+			:server_debian_password => "wordpress",
+			:server_root_password => "wordpress",
+			:server_repl_password => "wordpress"
+		},
+		
+		logstash: {
+		  group: 'adm',
+		  beaver: {
+		    # force specific beaver version via pip
+		    pip_package: "beaver==29",
+			server_role: 'server',
+			# change to match ip of logstashdemo server
+			server_ipaddress: '192.160.2.220',
+			# define log files to ship to logstash tagging accordingly
+			inputs: [
+				{file: {
+					type: "syslog",
+					tags: ["wordpressdemo", "syslog" ],
+					path: ["/var/log/*.log" ]
+				}},
+				{file: {
+					type: "apache-access",
+					tags: ["wordpressdemo", "apache-access" ],
+					path: "/var/log/apache2/access.log"
+				}},
+				{file: {
+					type: "apache-error",
+					tags: ["wordpressdemo", "apache-error" ],
+					path: "/var/log/apache2/error.log"
+				}},
+				{file: {
+					type: "apache-access",
+					tags: ["wordpressdemo", "apache-access" ],
+					path: "/var/log/apache2/wordpress-access.log"
+				}},
+				{file: {
+					type: "apache-error",
+					tags: ["wordpressdemo", "apache-error" ],
+					path: "/var/log/apache2/wordpress-error.log"
+				}},				
+			],
+			
+			# ship to redis on 192.168.2.220 - change as needed
+			outputs: [
+				redis: { 
+					host: "192.168.2.220",
+					data_type: "list",
+					key: "logstash"					
+				}
+			],	
+		  }
+		}		
+    }
+
+  end
+
+end

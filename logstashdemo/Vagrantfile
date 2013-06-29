@@ -1,0 +1,96 @@
+#use vagrant berkshelf plugin
+require 'berkshelf/vagrant'
+
+Vagrant.configure("2") do |config|
+
+  # Default vagrant ubuntu 12.04 LTS box
+  config.vm.box = "precise64"
+
+  # bridged because I want vm to be on the subnet of the LAN
+  config.vm.network :public_network
+
+  # Hack to set static ip address on bridged network adapter - change 192.168.2.220 and netmask to match your setup
+  config.vm.provision :shell, :inline => "ifconfig eth1 192.168.2.220 netmask 255.255.255.0 up"
+  
+  # Hack to use chef 11 beacuse of cookbook requirements
+  config.vm.provision :shell, :inline => "gem install chef --version 11.4.2 --no-rdoc --no-ri --conservative"
+  
+  # update apt repos as default vagrant precise64 box is out of date 
+  config.vm.provision :shell, :inline => "apt-get update"
+
+  config.berkshelf.enabled = true
+
+  config.vm.provision :chef_solo do |chef|
+
+	chef.run_list = %w[
+        hostname
+		minitest-handler
+        apt
+        java
+        monit
+        erlang
+        git
+        elasticsearch
+        php::module_curl
+        logstash::server
+        logstash::kibana
+		redisio::install
+		redisio::enable		
+	]
+
+	chef.json = {
+	
+		:set_fqdn => "logstashdemo",
+
+		elasticsearch: {
+		  cluster_name: "logstash",
+		  min_mem: '64m',
+		  max_mem: '128m',
+		  limits: {
+			nofile:  1024,
+			memlock: 512
+		  }
+		},
+		
+		redis: {
+		  configure_list_max_ziplist: false,
+		  config: {
+			configure_list_max_ziplist: false
+		  }
+		},
+		
+		logstash: {
+		  elasticsearch_ip: '127.0.0.1',
+		  server: {
+			xms: '128m',
+			xmx: '128m',
+			enable_embedded_es: false,
+			elasticserver_ip: '127.0.0.1',
+			install_rabbitmq: false,
+			ipv4_only: true,
+			inputs: [
+				{redis: {
+					type: "redis-input",
+					host: "localhost",
+					data_type: "list",
+					key: "logstash"
+				}},
+			],
+			outputs: [
+				stdout: { 
+					debug: "true",
+					debug_format: "json" 
+				}
+			],
+		  },
+		  kibana: {
+			# bind to all ip addresses
+			server_name: '0.0.0.0',
+			http_port: '8080'
+		  }
+		}
+	}
+
+  end
+
+end
