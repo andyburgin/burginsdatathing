@@ -8,13 +8,13 @@ Prerequsites
 ------------
 First install vagrant and the vagrant berkshelf plugin from:
 
- http://www.vagrantup.com/
- https://github.com/RiotGames/vagrant-berkshelf
+* http://www.vagrantup.com/
+* https://github.com/RiotGames/vagrant-berkshelf
 
 File Structure
 --------------
 Checkout/clone the repository into your vagrant folder or whereever you see fit:
-
+```
  +---logstashdemo
  |       Berksfile
  |       Vagrantfile
@@ -22,7 +22,7 @@ Checkout/clone the repository into your vagrant folder or whereever you see fit:
  \---wordpressdemo
          Berksfile
          Vagrantfile
-
+```
 Up and Running
 --------------		 
 Tweak the network settings in each vagrantfile and "vagrant up" each vm. 
