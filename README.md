@@ -8,13 +8,13 @@ Prerequsites
 ------------
 First install vagrant and the vagrant berkshelf plugin from:
 
- http://www.vagrantup.com/
- https://github.com/RiotGames/vagrant-berkshelf
+* http://www.vagrantup.com/
+* https://github.com/RiotGames/vagrant-berkshelf
 
 File Structure
 --------------
 Checkout/clone the repository into your vagrant folder or whereever you see fit:
-
+```
  +---logstashdemo
  |       Berksfile
  |       Vagrantfile
@@ -22,7 +22,7 @@ Checkout/clone the repository into your vagrant folder or whereever you see fit:
  \---wordpressdemo
          Berksfile
          Vagrantfile
-
+```
 Up and Running
 --------------		 
 Tweak the network settings in each vagrantfile and "vagrant up" each vm. 
@@ -31,7 +31,7 @@ As mentioned in the blog article there's one bit not working, ssh into the logst
 
 Talk To Me
 ----------
-I'm still learing all these technologies, your "constructive" feedbacka nd comments are very much welcome, especially those relating to the dirty hacks I've user :
+I'm still learning all these technologies, your "constructive" feedback and comments are very much welcome, especially those relating to the hacks I've used :
 
 * Subnet LAN setup hack
 * Chef 11 hack
@@ -39,7 +39,7 @@ I'm still learing all these technologies, your "constructive" feedbacka nd comme
 * Beaver pip install forcing release 29
 * Start Kibana at boot
 
-Log an issue or post a comment on the blog.
+Please log an issue or post a comment on the blog (trolls need not apply).
 
 Cheers
 
