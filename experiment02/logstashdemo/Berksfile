@@ -16,3 +16,5 @@ cookbook 'elasticsearch', git: 'git://github.com/elasticsearch/cookbook-elastics
 cookbook 'graphite', git: 'https://github.com/hw-cookbooks/graphite.git'
 cookbook 'kibana', git: 'https://github.com/lusis/chef-kibana.git'
 cookbook 'hostsfile', git: 'https://github.com/customink-webops/hostsfile.git', ref: 'v1.0.1' 
+cookbook 'ufw', git: 'https://github.com/opscode-cookbooks/ufw.git'
+
