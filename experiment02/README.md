@@ -1,12 +1,6 @@
 Burgins' Data Thing - experiment 2
 ==================================
-This repository contains the the files for experiment 2 on 
-
-
-***********************co.uk/post/70070135143/fgddfgfdgfdgfdgfdg-logstash-1-3-1 
-
-
-including the latest updates and some serious refactoring of the original vagrant setup.
+This repository contains the the files for experiment 2 on http://data.andyburgin.co.uk/post/90170824618/experiment-2-vagrant-chef-setup-for-beaver-logstash including the latest updates and some serious refactoring of the original vagrant setup.
 
 Since the original incarnation of experiment 2 there have been several blog posts and github commits...
 
@@ -46,15 +40,13 @@ Prerequsites
 ------------
 First install the latest version of vagrant with the associated plugins, I've listed the versions I've used:
 
-	Virtualbox 4.3.10
-
-	Vagrant 1.6.3 - https://www.vagrantup.com/downloads.html
-
-	Vagrant Berkshelf - https://github.com/berkshelf/vagrant-berkshelf 
+* Virtualbox 4.3.10
+* Vagrant 1.6.3 - https://www.vagrantup.com/downloads.html
+* Vagrant Berkshelf - https://github.com/berkshelf/vagrant-berkshelf 
 ```
 		vagrant plugin install vagrant-berkshelf --plugin-version '>= 2.0.1' --verbose
 ```
-	Vagrant Chef Omnibus installer - https://github.com/schisamo/vagrant-omnibus
+* Vagrant Chef Omnibus installer - https://github.com/schisamo/vagrant-omnibus
 ```
 		vagrant plugin install vagrant-omnibus
 ```
@@ -84,7 +76,9 @@ Up and Running
 --------------		 
 Tweak the network settings in each vagrantfile and "vagrant up" each vagrant machine. See http://www.vagrantup.com/ if you are't familiar with that. 
 
-Now setup your new wordpress blog (admin account, make a few posts etc) - http://192.168.2.222/ 
+Now setup your new wordpress blog (admin account, make a few posts etc)
+
+	http://192.168.2.222/ 
 
 Then you can take a look under the hood on the logstash server using elasticsearch plugins:
 
