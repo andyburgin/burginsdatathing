@@ -1,159 +1,142 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
 #use vagrant berkshelf plugin
 require 'berkshelf/vagrant'
 
-Vagrant.configure("2") do |config|
+# Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
+VAGRANTFILE_API_VERSION = "2"
 
-  # Default vagrant ubuntu 12.04 LTS box
-  config.vm.box = "precise64"
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
-  # bridged because I want vm to be on the subnet of the LAN
-  config.vm.network :public_network
+  # ubuntu 12.04 LTS box from https://vagrantcloud.com/
+  config.vm.box = "hashicorp/precise64"
 
-  # Hack to set static ip address on bridged network adapter - change 192.168.2.220 and netmask to match your setup
-  config.vm.provision :shell, :inline => "ifconfig eth1 192.168.2.220 netmask 255.255.255.0 up"
-  
-  # update apt repos as default vagrant precise64 box is out of date 
-  config.vm.provision :shell, :inline => "apt-get update"
-  
-  # add aditional environment packages for chef 11 
-  config.vm.provision :shell, :inline => "apt-get -y install ruby1.9.3"
-  config.vm.provision :shell, :inline => "apt-get -y install build-essential"
-  
-  # Hack to use chef 11 beacuse of cookbook requirements
-  config.vm.provision :shell, :inline => "gem install chef --version 11.4.2 --no-rdoc --no-ri --conservative"
+  config.vm.network :public_network, ip: "192.168.2.220"
 
+  # install latest version of chef onto VM before provisioning
+  config.omnibus.chef_version = :latest
+
+  # use Berkschelf to manage cookbook depenencies listed in Berksfile
   config.berkshelf.enabled = true
 
-  config.vm.provision :chef_solo do |chef|
+  config.vm.provision "chef_solo" do |chef|
 
-	chef.run_list = %w[
-		hostname
-		minitest-handler
-		apt
+    # recipes to run
+    chef.run_list = %w[
+ 	 	apt
 		java
-		monit
-		erlang
-		git
-		elasticsearch
-		elasticsearch::plugins 
-		php::module_curl
-		logstash::server
-		kibana::default
-		redisio::install
-		redisio::enable
-		graphite
-		ufw
-	]
+ 	 	elasticsearch
+ 	 	elasticsearch::plugins
+ 	 	logstash::server
+ 	 	kibana::default
+ 	 	redisio::install
+ 	 	redisio::enable
+	  	graphite
+  		ufw
+    ]
 
+    # recipe configuration
 	chef.json = {
-		:set_fqdn => "logstashdemo",
 
-		elasticsearch: {
-		  cluster_name: "logstash",
-		  min_mem: '64m',
-		  max_mem: '128m',
-		  limits: {
+	  	elasticsearch: {
+			cluster_name: "logstash",
+			min_mem: '64m',
+			max_mem: '128m',
+		    limits: {
 			nofile:  1024,
-			memlock: 512
+  			memlock: 512
+	  	  },
+		    plugins: {
+			    'karmi/elasticsearch-paramedic' => {},
+				'mobz/elasticsearch-head' => {},
+		    	'lukas-vlcek/bigdesk' => { 'version' => '1.0.0' }
+		    }
 		  },
-		  plugins: {
-			'karmi/elasticsearch-paramedic' => {},
-			'mobz/elasticsearch-head' => {},
-			'lukas-vlcek/bigdesk' => { 'version' => '1.0.0' }
-		  }
+
+  		kibana: {
+			webserver: 'apache',
+		    webserver_listen: '*'
+	  	},
+
+  		graphite: {
+			listen_port: 8080
 		},
-		
-		kibana: {
-		  webserver: 'apache',
-		  webserver_hostname: '192.168.2.220',
-		  webserver_listen: '*'
+
+	  	redis: {
+		    configure_list_max_ziplist: false,
+		    config: {
+				configure_list_max_ziplist: false
+			}
 		},
-		
-		graphite: {
-		  listen_port: 8080
-		},
-		
-		redis: {
-		  configure_list_max_ziplist: false,
-		  config: {
-			configure_list_max_ziplist: false
-		  }
-		},
-		
-		logstash: {
-		  elasticsearch_ip: '127.0.0.1',
-		  graphite_ip: '127.0.0.1',
-		  graphite_role: 'graphite',
-		  server: {
-			xms: '128m',
-			xmx: '128m',
-			enable_embedded_es: false,
-			elasticserver_ip: '127.0.0.1',
-			install_rabbitmq: false,
-			ipv4_only: true,
-			inputs: [
-				{redis: {
-					type: "redis-input",
-					host: "localhost",
-					data_type: "list",
-					key: "logstash"
-				}},
-			],
-            filters: [
-              {
-                condition: 'if [type] == "apache-access"',
-                block: {
-					grok: {
-						pattern: "%{COMBINEDAPACHELOG}"
-					},
-					date: {
-						match: [
-							"timestamp",
-							"MMM  d HH:mm:ss",
-							"MMM dd HH:mm:ss",
-							"ISO8601"
-						]
-					}
-                }
-              },
-              {
-                condition: 'if [type] == "syslog"',
-                block: {
-					grok: {
-						pattern: "%{SYSLOGBASE} %{GREEDYDATA:message}"
-					}
-                }
-              }
-            ],
-			outputs: [
-				{stdout: { 
-					debug: "true",
-					debug_format: "json" 
-				}},
-				{graphite: { 
-					host: "127.0.0.1",
-					metrics: [
-						"logstash.events", 1, "hosts.%{@source_host}.apache.%{response}", "%{bytes}" 
-					],
-				}},
-			]
-		  }
-		},
-		
-		# please customise these rules as per your requirements admin=192.168.2.10,user=192.168.2.58,wordpressdemo=192.168.2.222
-		firewall: {
-				rules: [
-				  {http192168210: { port: "80", source: "192.168.2.10", action: "allow"}},
-				  {http192168258: { port: "80", source: "192.168.2.58", action: "allow"}},
-				  {ssh192168210: { port: "22", source: "192.168.2.10", action: "allow"}},
-				  {ssh1921682222: { port: "22", source: "192.168.2.222", action: "allow"}},
-				  {es192168210: { port: "9200", source: "192.168.2.10", action: "allow"}},
-				  {es192168258: { port: "9200", source: "192.168.2.58", action: "allow"}},
-				  {redis1921682222: { port: "6379", source: "192.168.2.222", action: "allow"}},
+
+  		logstash: {
+			elasticsearch_ip: '127.0.0.1',
+			graphite_ip: '127.0.0.1',
+			graphite_role: 'graphite',
+			server: {
+				xms: '128m',
+    			xmx: '128m',
+				enable_embedded_es: false,
+				elasticserver_ip: '127.0.0.1',
+    			install_rabbitmq: false,
+    			ipv4_only: true,
+				inputs: [
+					{redis: {
+						type: "redis-input",
+						host: "localhost",
+						data_type: "list",
+						key: "logstash"
+					}},
 				],
-		}
+				filters: [
+				{
+					condition: 'if [type] == "apache-access"',
+						block: {
+							grok: {
+								pattern: "%{COMBINEDAPACHELOG}"
+							},
+							date: {
+								match: ["timestamp", "MMM  d HH:mm:ss", "MMM dd HH:mm:ss", "ISO8601" ]
+							},
+							geoip: {
+								source: "clientip"
+							}	  
+						}
+				},
+				{
+					condition: 'if [type] == "syslog"',
+					block: {
+						grok: {
+							pattern: "%{SYSLOGBASE} %{GREEDYDATA:message}"
+						}
+					}
+				}
+				],
+			    outputs: [
+				    {stdout: {
+					    debug: "true",
+					    debug_format: "json"
+					}},
+					{graphite: {
+						host: "127.0.0.1",
+						metrics: [
+							"logstash.events", 1, "hosts.%{@source_host}.apache.%{response}", "%{bytes}"
+						],
+					}},
+			    ]
+		    }
+		},
+
+  		# please customise these rules as per your requirements admin=192.168.2.10/10.0.2.2,wordpressdemo=192.168.2.222
+	  	firewall: {
+		  		rules: [
+					  {all192168210: { source: "192.168.2.10", action: "allow"}},
+					  {all10022: { source: "10.0.2.2", action: "allow"}},
+					  {redis1921682222: { port: "6379", source: "192.168.2.222", action: "allow"}},
+				],
+		 }
 	}
 
   end
-
 end

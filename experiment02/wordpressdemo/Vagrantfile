@@ -1,46 +1,37 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
 #use vagrant berkshelf plugin
 require 'berkshelf/vagrant'
 
-Vagrant.configure("2") do |config|
+# Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
+VAGRANTFILE_API_VERSION = "2"
 
-  # Default vagrant ubuntu 12.04 LTS box
-  config.vm.box = "precise64"
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
-  # bridged because I want vm to be on the subnet of the LAN
-  config.vm.network :public_network
+  # ubuntu 12.04 LTS box from https://vagrantcloud.com/
+  config.vm.box = "hashicorp/precise64"
 
-  # Hack to set static ip address on bridged network adapter - change 192.168.2.222 and netmask to match your setup
-  config.vm.provision :shell, :inline => "ifconfig eth1 192.168.2.222 netmask 255.255.255.0 up"
+  config.vm.network :public_network, ip: "192.168.2.222"
 
-  # update apt repos as default vagrant precise64 box is out of date 
-  config.vm.provision :shell, :inline => "apt-get update"  
-  
-  # add aditional environment packages for chef 11 
-  config.vm.provision :shell, :inline => "apt-get -y install ruby1.9.3"
-  config.vm.provision :shell, :inline => "apt-get -y install build-essential"
-  
-  # Hack to use chef 11 beacuse of cookbook requirements 
-  config.vm.provision :shell, :inline => "gem install chef --version 11.4.2 --no-rdoc --no-ri --conservative"
-  
+  # install latest version of chef onto VM before provisioning
+  config.omnibus.chef_version = :latest
+
+  # use Berkschelf to manage cookbook depenencies listed in Berksfile
   config.berkshelf.enabled = true
 
-  config.vm.provision :chef_solo do |chef|
+  config.vm.provision "chef_solo" do |chef|
 
+    # recipes to run
 	chef.run_list = %w[
-        apt
-		hostname
-		build-essential 
+		apt
 		wordpress
 		logstash::beaver
 	]
 
+    # recipe configuration
 	chef.json = {
-	
-		:build_essential => {
-			"compiletime" => true
-		},
 
-		:set_fqdn => "wordpressdemo",
 		:mysql => {
 			:server_debian_password => "wordpress",
 			:server_root_password => "wordpress",
@@ -51,7 +42,9 @@ Vagrant.configure("2") do |config|
 		  group: 'adm',
 		  beaver: {
 		    # force specific beaver version via pip
-		    pip_package: "beaver==29",
+		    pip_package: "git+git://github.com/josegonzalez/beaver.git#egg=beaver",
+			# set the logstash_version so beaver starts with master.
+			logstash_version:  1,
 			server_role: 'server',
 			# change to match ip of logstashdemo server
 			server_ipaddress: '192.160.2.220',
@@ -97,5 +90,4 @@ Vagrant.configure("2") do |config|
     }
 
   end
-
 end
